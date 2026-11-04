@@ -1,9 +1,12 @@
+// Package game implements the tappy state machine.
 package game
 
 import "time"
 
+// Phase is a game state.
 type Phase int
 
+// Game phases.
 const (
 	Armed Phase = iota
 	Countdown
@@ -11,6 +14,7 @@ const (
 	Results
 )
 
+// Config holds game timing and trigger settings.
 type Config struct {
 	TriggerClicks int
 	TriggerWindow time.Duration
@@ -19,6 +23,7 @@ type Config struct {
 	ResultsDelay  time.Duration
 }
 
+// DefaultConfig is the standard game configuration.
 var DefaultConfig = Config{
 	TriggerClicks: 5,
 	TriggerWindow: time.Second,
@@ -27,6 +32,7 @@ var DefaultConfig = Config{
 	ResultsDelay:  3 * time.Second,
 }
 
+// Result is the outcome of a round.
 type Result struct {
 	Clicks   int
 	Duration time.Duration
@@ -39,9 +45,14 @@ func (r Result) CPS() float64 {
 	if r.Duration <= 0 {
 		return 0
 	}
-	return float64(r.Clicks) / r.Duration.Seconds()
+
+	clicks := float64(r.Clicks)
+	seconds := r.Duration.Seconds()
+
+	return clicks / seconds
 }
 
+// Game tracks the current phase, clicks, and personal best.
 type Game struct {
 	cfg    Config
 	phase  Phase
@@ -57,16 +68,40 @@ func New(cfg Config, best int) *Game {
 	return &Game{cfg: cfg, best: best}
 }
 
-func (g *Game) Config() Config  { return g.cfg }
-func (g *Game) Phase() Phase    { return g.phase }
-func (g *Game) Clicks() int     { return g.clicks }
-func (g *Game) Best() int       { return g.best }
-func (g *Game) Progress() int   { return len(g.taps) }
-func (g *Game) Result() *Result { return g.result }
+// Config returns the game configuration.
+func (g *Game) Config() Config {
+	return g.cfg
+}
+
+// Phase returns the current phase.
+func (g *Game) Phase() Phase {
+	return g.phase
+}
+
+// Clicks returns the clicks counted in the current round.
+func (g *Game) Clicks() int {
+	return g.clicks
+}
+
+// Best returns the personal best.
+func (g *Game) Best() int {
+	return g.best
+}
+
+// Progress returns the clicks counted toward the trigger.
+func (g *Game) Progress() int {
+	return len(g.taps)
+}
+
+// Result returns the last round result, or nil.
+func (g *Game) Result() *Result {
+	return g.result
+}
 
 // Click registers a left button-down at now.
 func (g *Game) Click(now time.Time) {
 	g.Advance(now)
+
 	switch g.phase {
 	case Armed:
 		g.taps = append(g.taps, now)
@@ -86,12 +121,14 @@ func (g *Game) Advance(now time.Time) {
 		switch g.phase {
 		case Armed:
 			g.prune(now)
+
 			return
 		case Countdown:
 			goAt := g.start.Add(time.Duration(g.cfg.CountdownFrom) * time.Second)
 			if now.Before(goAt) {
 				return
 			}
+
 			g.phase = Playing
 			g.start = goAt
 			g.clicks = 0
@@ -100,11 +137,13 @@ func (g *Game) Advance(now time.Time) {
 			if now.Before(end) {
 				return
 			}
+
 			g.finish(end)
 		case Results:
 			if now.Sub(g.start) < g.cfg.ResultsDelay {
 				return
 			}
+
 			g.phase = Armed
 			g.taps = nil
 		}
@@ -117,18 +156,25 @@ func (g *Game) Abort() {
 		g.phase = Armed
 		g.clicks = 0
 	}
+
 	g.taps = nil
 }
 
 // CountdownValue returns the countdown number to display.
 func (g *Game) CountdownValue(now time.Time) int {
-	n := g.cfg.CountdownFrom - int(now.Sub(g.start)/time.Second)
-	return max(1, min(n, g.cfg.CountdownFrom))
+	elapsed := int(now.Sub(g.start) / time.Second)
+	n := g.cfg.CountdownFrom - elapsed
+	n = min(n, g.cfg.CountdownFrom)
+
+	return max(n, 1)
 }
 
 // Remaining returns the time left in the current round.
 func (g *Game) Remaining(now time.Time) time.Duration {
-	return max(0, g.start.Add(g.cfg.GameDuration).Sub(now))
+	end := g.start.Add(g.cfg.GameDuration)
+	remaining := end.Sub(now)
+
+	return max(remaining, 0)
 }
 
 func (g *Game) finish(end time.Time) {
@@ -137,6 +183,7 @@ func (g *Game) finish(end time.Time) {
 		g.best = r.Clicks
 		r.NewBest = true
 	}
+
 	r.Best = g.best
 	g.result = &r
 	g.phase = Results
@@ -148,5 +195,6 @@ func (g *Game) prune(now time.Time) {
 	for i < len(g.taps) && now.Sub(g.taps[i]) >= g.cfg.TriggerWindow {
 		i++
 	}
+
 	g.taps = g.taps[i:]
 }

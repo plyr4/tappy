@@ -1,13 +1,16 @@
-BIN := tapper
-PKG := ./cmd/tapper
+BIN := tappy
+PKG := ./cmd/tappy
 
-.PHONY: build test clean release
+.PHONY: build test lint clean release
 
 build:
 	go build -o bin/$(BIN) $(PKG)
 
 test:
 	go test ./...
+
+lint:
+	golangci-lint run ./...
 
 release:
 	GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o dist/$(BIN)-darwin-arm64 $(PKG)
