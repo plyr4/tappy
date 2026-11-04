@@ -5,8 +5,11 @@ Terminal clicking-speed game for macOS. Tap 5 times quickly to start a 10-second
 ## Install
 
 ```
-brew install plyr4/tap/tappy
+brew tap plyr4/tappy https://github.com/plyr4/tappy
+brew install --HEAD plyr4/tappy/tappy
 ```
+
+Upgrade with `brew upgrade --fetch-HEAD tappy`.
 
 Or from source:
 
@@ -22,7 +25,7 @@ Run `tappy` in a terminal with mouse reporting support (e.g. Ghostty).
 - Click as fast as you can for 10 seconds.
 - `esc` quits.
 
-Personal best is stored in `~/Library/Application Support/tappy/best.json`.
+Personal best is stored in `~/Library/Application Support/tappy/best.json` (OS user config directory).
 
 ## Development
 
